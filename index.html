@@ -1,278 +1,528 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>설비종합효율(OEE) 데이터 관리 시트</title>
-    <style>
-        :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-color: #3b82f6;
-            --text-color: #e2e8f0;
-            --border-color: #333;
-            --green: #10b981;
-            --orange: #f59e0b;
-            --red: #ef4444;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            padding: 20px;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate OEE Enterprise Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f19; --surface: #111827; --surface2: #1f2937;
+  --border: #374151; --border2: #4b5563;
+  --text: #f3f4f6; --text-muted: #9ca3af; --text-dim: #d1d5db;
+  --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.15);
+  --green: #10b981; --green-glow: rgba(16,185,129,0.15);
+  --orange: #f59e0b; --orange-glow: rgba(245,158,11,0.12);
+  --red: #ef4444; --red-glow: rgba(239,68,68,0.15);
+  --purple: #a78bfa;
+  --yi: rgba(250,204,21,0.06); --yb: rgba(250,204,21,0.25);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'IBM Plex Sans KR', sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding-bottom:60px; }
 
-        h1, h2 { color: #ffffff; text-align: center; margin-bottom: 30px; }
+/* ── Header ── */
+header { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 32px; display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:200; backdrop-filter:blur(12px); }
+.logo { width:42px; height:42px; background:linear-gradient(135deg, var(--accent), #1d4ed8); border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:14px; color:#fff; }
+header h1 { font-size:17px; font-weight:700; letter-spacing:-0.5px; }
+header small { font-size:11px; color:var(--text-muted); display:block; margin-top:2px; }
+.nav { display:flex; gap:6px; margin-left:auto; }
+.ntab { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); transition:all .2s; }
+.ntab:hover { color:var(--text); border-color:var(--text-muted); }
+.ntab.on { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 4px 12px rgba(59,130,246,0.3); }
 
-        .card {
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
+/* ── Layout ── */
+.wrap { max-width:1440px; margin:0 auto; padding:24px; }
+.pg { display:none; } .pg.on { display:block; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.g4 { display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:20px; }
+@media(max-width:1024px) { .g2, .g4 { grid-template-columns:1fr; } }
 
-        .input-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-        }
+/* ── Cards & Panels ── */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:20px; box-shadow:0 4px 20px rgba(0,0,0,0.2); }
+.ch { padding:14px 20px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.ch h2 { font-size:14px; font-weight:600; }
+.ch .tag { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:var(--accent-glow); color:var(--accent); border:1px solid rgba(59,130,246,0.2); }
+.ch .hr { margin-left:auto; display:flex; gap:8px; }
+.cb { padding:20px; }
 
-        .input-group { display: flex; flex-direction: column; gap: 8px; }
-        
-        label { font-size: 13px; color: #a0aec0; font-weight: bold; }
-        
-        input {
-            padding: 10px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background-color: #2d3748;
-            color: white;
-            font-size: 14px;
-        }
-        
-        input:focus { outline: none; border-color: var(--primary-color); }
+/* ── Form Inputs ── */
+.fr3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:12px; }
+.fr4 { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+.fd { display:flex; flex-direction:column; gap:6px; }
+label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; }
+input[type=number], input[type=text], input[type=date] {
+  background:var(--yi); border:1px solid var(--yb); border-radius:8px; padding:10px 14px;
+  font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#fde68a; outline:none; width:100%;
+}
+input:focus { border-color:rgba(250,204,21,0.7); background:rgba(250,204,21,0.1); }
 
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
+/* ── Tables ── */
+.iet-wrap { overflow-x:auto; width:100%; }
+table.iet { width:100%; border-collapse:collapse; font-size:13px; min-width:1300px; text-align:center; }
+table.iet th { padding:12px 8px; font-size:11px; font-weight:700; color:var(--text-muted); border-bottom:2px solid var(--border); background:var(--surface2); position:sticky; top:0; }
+table.iet th.th-inp { background:#1e293b; color:#93c5fd; }
+table.iet th.th-der { background:#115e59; color:#99f6e4; }
+table.iet th.th-out { background:#1e3a8a; color:#bfdbfe; }
+table.iet td { padding:6px 4px; border-bottom:1px solid var(--border); background:var(--surface); vertical-align:middle; }
+table.iet tr:hover td { background:rgba(255,255,255,0.02); }
 
-        button:hover { background-color: #2563eb; }
-        
-        .btn-delete { background-color: #2d3748; color: #fc8181; width: auto; padding: 6px 12px; font-size: 12px;}
-        .btn-delete:hover { background-color: var(--red); color: white; }
+/* Table Inline Inputs */
+.cell-inp { background:rgba(250,204,21,0.04); border:1px solid rgba(250,204,21,0.15); border-radius:6px; padding:6px; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#fde68a; outline:none; text-align:center; width:100%; }
+.cell-inp:focus { border-color:var(--orange); background:rgba(250,204,21,0.1); }
+.cell-inp.dt-inp { color:var(--text); text-align:left; }
+.cell-inp.tx-inp { color:var(--text-dim); text-align:left; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-            margin-top: 10px;
-        }
+/* Derived & Output Cells */
+td.c-der { background:rgba(16,185,129,0.02); font-family:'IBM Plex Mono',monospace; color:#2dd4bf; font-weight:500; }
+td.c-out { background:rgba(59,130,246,0.03); font-family:'IBM Plex Mono',monospace; font-weight:700; }
 
-        th, td {
-            padding: 12px;
-            text-align: center;
-            border-bottom: 1px solid var(--border-color);
-        }
+/* ── Badges ── */
+.badge { display:inline-block; padding:3px 8px; border-radius:5px; font-size:11px; font-weight:700; font-family:'IBM Plex Mono',monospace; }
+.b-gn { background:var(--green-glow); color:var(--green); border:1px solid rgba(16,185,129,0.2); }
+.b-og { background:var(--orange-glow); color:var(--orange); border:1px solid rgba(245,158,11,0.2); }
+.b-rd { background:var(--red-glow); color:var(--red); border:1px solid rgba(239,68,68,0.2); }
 
-        th { background-color: #2d3748; color: #a0aec0; font-weight: bold; }
-        
-        .badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 12px;
-        }
-    </style>
+/* ── Buttons ── */
+button { padding:10px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; border:none; display:flex; align-items:center; gap:6px; }
+.btn-p { background:var(--accent); color:#fff; } .btn-p:hover { background:#2563eb; transform:translateY(-1px); }
+.btn-s { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border); } .btn-s:hover { border-color:var(--text-muted); color:var(--text); }
+.btn-d { background:var(--red-glow); color:var(--red); border:1px solid rgba(239,68,68,0.2); } .btn-d:hover { background:var(--red); color:#fff; }
+
+/* ── Summary & Hero ── */
+.kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; position:relative; overflow:hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--border2); }
+.kpi-card.accent::before { background:var(--accent); }
+.kpi-card.green::before { background:var(--green); }
+.kpi-card.orange::before { background:var(--orange); }
+.kpi-card.purple::before { background:var(--purple); }
+.kpi-card .kl { font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:6px; text-transform:uppercase; }
+.kpi-card .kv { font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:700; }
+
+.cbox { display:flex; align-items:center; gap:14px; border:1px solid var(--border); padding:16px; border-radius:10px; margin-top:14px; }
+.cbox.ls { background:var(--red-glow); border-color:rgba(239,68,68,0.2); color:var(--red); }
+.cbox.sv { background:var(--green-glow); border-color:rgba(16,185,129,0.2); color:var(--green); }
+
+/* Modal */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:none; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
+.modal-bg.show { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:640px; overflow:hidden; animation:fup 0.2s ease; }
+@keyframes fup { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+textarea { width:100%; height:180px; background:#0b0f19; border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; font-size:12px; resize:none; outline:none; }
+#toast { position:fixed; bottom:24px; right:24px; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; padding:12px 20px; font-size:13px; z-index:999; display:none; box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+</style>
 </head>
 <body>
 
-    <h1>⚙️ OEE (설비종합효율) 실시간 트래커</h1>
+<header>
+  <div class="logo">OEE</div>
+  <div>
+    <h1>설비종합효율(OEE) 엔터프라이즈 분석 시스템</h1>
+    <small>Real-time Reactive Smart Factory Decision Engine</small>
+  </div>
+  <div class="nav">
+    <button class="ntab on" onclick="go('dataentry',this)">✏️ 실시간 데이터 관리</button>
+    <button class="ntab" onclick="go('monitoring',this)">📈 종합 모니터링</button>
+  </div>
+</header>
 
+<div class="wrap">
+
+  <div id="pg-dataentry" class="pg on">
     <div class="card">
-        <h2 style="text-align: left; font-size: 18px;">📊 일일 생산 데이터 입력</h2>
-        <div class="input-grid">
-            <div class="input-group">
-                <label>날짜</label>
-                <input type="date" id="dateInput">
-            </div>
-            <div class="input-group">
-                <label>설비명</label>
-                <input type="text" id="machineInput" placeholder="예: M-01">
-            </div>
-            <div class="input-group">
-                <label>계획 조업 시간 (분)</label>
-                <input type="number" id="plannedTime" placeholder="예: 480" value="480">
-            </div>
-            <div class="input-group">
-                <label>고장/정지 시간 (분)</label>
-                <input type="number" id="downTime" placeholder="예: 30" value="0">
-            </div>
-            <div class="input-group">
-                <label>이론 사이클 타임 (분/개)</label>
-                <input type="number" step="0.1" id="cycleTime" placeholder="예: 1.5">
-            </div>
-            <div class="input-group">
-                <label>총 생산량 (개)</label>
-                <input type="number" id="totalProduct" placeholder="예: 250">
-            </div>
-            <div class="input-group">
-                <label>불량 수량 (개)</label>
-                <input type="number" id="defectProduct" placeholder="예: 5" value="0">
-            </div>
+      <div class="ch">
+        <span class="tag">ENTERPRISE MATRIX</span>
+        <h2>인라인 실시간 생산 및 손실 데이터 관리 시트</h2>
+        <div class="hr">
+          <button class="btn-p" onclick="addRow()">＋ 행 추가</button>
+          <button class="btn-s" onclick="openBulk()">📋 엑셀 복사/붙여넣기</button>
+          <button class="btn-s" onclick="exportCSV()" style="background:rgba(16,185,129,0.1); border-color:var(--green); color:var(--green);">📥 완벽한 CSV 내보내기</button>
+          <button class="btn-d" onclick="clearAll()">🗑 전체 초기화</button>
         </div>
-        <button onclick="calculateAndSave()">데이터 계산 및 저장</button>
-    </div>
-
-    <div class="card">
-        <h2 style="text-align: left; font-size: 18px;">📋 OEE 분석 히스토리</h2>
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>날짜</th>
-                        <th>설비명</th>
-                        <th>시간가동률</th>
-                        <th>성능가동률</th>
-                        <th>양품률</th>
-                        <th>최종 OEE</th>
-                        <th>상태</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody id="dataTable">
-                    </tbody>
-            </table>
+      </div>
+      <div class="cb" style="padding:0;">
+        <div class="iet-wrap">
+          <table class="iet">
+            <thead>
+              <tr>
+                <th class="th-inp" style="width:120px">일자</th>
+                <th class="th-inp" style="width:100px">제품명</th>
+                <th class="th-inp" style="width:70px">호기</th>
+                <th class="th-inp" style="width:80px">C/T<br>(분/개)</th>
+                <th class="th-inp" style="width:80px">생산량<br>(개)</th>
+                <th class="th-inp" style="width:70px">불량수<br>(개)</th>
+                <th class="th-inp" style="width:80px">조업시간<br>(분)</th>
+                <th class="th-inp" style="width:80px">계획정지<br>(분)</th>
+                <th class="th-inp" style="width:80px">Overhaul<br>(분)</th>
+                <th class="th-inp" style="width:80px">고장정지<br>(분)</th>
+                <th class="th-inp" style="width:80px">교체시간<br>(분)</th>
+                <th class="th-der">부하시간</th>
+                <th class="th-der">가동시간</th>
+                <th class="th-der">정미시간</th>
+                <th class="th-der">가치시간</th>
+                <th class="th-out">시간가동</th>
+                <th class="th-out">성능가동</th>
+                <th class="th-out">양품률</th>
+                <th class="th-out">최종 OEE</th>
+                <th style="width:60px">작업</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
         </div>
+      </div>
     </div>
+    
+    <div class="g4">
+      <div class="kpi-card accent"><div class="kl">평균 시간가동률</div><div class="kv" id="kpi-avail">—</div></div>
+      <div class="kpi-card green"><div class="kl">평균 성능가동률 <small style="display:inline; color:var(--text-muted);">(Cap 100%)</small></div><div class="kv" id="kpi-perf">—</div></div>
+      <div class="kpi-card orange"><div class="kl">평균 양품률</div><div class="kv" id="kpi-quality">—</div></div>
+      <div class="kpi-card purple"><div class="kl">종합 평균 OEE</div><div class="kv" id="kpi-oee">—</div></div>
+    </div>
+  </div>
 
-    <script>
-        // 1. 초기 데이터 로드 (LocalStorage)
-        let oeeData = JSON.parse(localStorage.getItem('smartFactoryOEE')) || [];
+  <div id="pg-monitoring" class="pg">
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><span class="tag">TREND VISUALIZATION</span><h2>OEE 및 3대 지표 분석 추이 세부 분석</h2></div>
+        <div class="cb">
+          <div style="height:320px; position:relative;"><canvas id="chart-canvas"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="tag">COST MANAGEMENT</span><h2>경제성 손실 및 OEE 목표값 설정 분석</h2></div>
+        <div class="cb">
+          <div class="fr3">
+            <div class="fd"><label>OEE 관리 목표치</label><input type="number" id="cfg-tgt" value="0.85" step="0.01" min="0" max="1" oninput="syncCalculations()"></div>
+            <div class="fd"><label>공장 표준 기계임률(원/분)</label><input type="number" id="cfg-mr" value="2500" step="100" oninput="syncCalculations()"></div>
+          </div>
+          <div class="cbox" id="cost-box">
+            <span style="font-size:24px;" id="cost-icon">➖</span>
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); font-weight:700;" id="cost-label">재무 영향도 측정</div>
+              <div style="font-family:'IBM Plex Mono'; font-size:22px; font-weight:700;" id="cost-amount">— 원</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:4px;" id="cost-detail">데이터를 가동하면 원가 영향이 실시간 계산됩니다.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        // 오늘 날짜를 기본값으로 세팅
-        document.getElementById('dateInput').valueAsDate = new Date();
+</div>
 
-        // 2. OEE 계산 및 저장 로직
-        function calculateAndSave() {
-            // 입력값 가져오기
-            const date = document.getElementById('dateInput').value;
-            const machine = document.getElementById('machineInput').value;
-            const plannedTime = parseFloat(document.getElementById('plannedTime').value);
-            const downTime = parseFloat(document.getElementById('downTime').value);
-            const cycleTime = parseFloat(document.getElementById('cycleTime').value);
-            const totalProduct = parseFloat(document.getElementById('totalProduct').value);
-            const defectProduct = parseFloat(document.getElementById('defectProduct').value);
+<div class="modal-bg" id="bulk-modal">
+  <div class="modal">
+    <div class="ch"><h2>📋 엑셀 대량 데이터 붙여넣기</h2><button style="margin-left:auto; background:transparent; color:var(--text-muted);" onclick="closeBulk()">✕</button></div>
+    <div class="cb">
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">엑셀의 열 순서대로 데이터를 복사(Ctrl+C)하여 아래에 붙여넣기(Ctrl+V) 하세요:</p>
+      <p style="font-size:11px; color:var(--orange); margin-bottom:10px;">[일자  제품명  호기  C/T  생산량  불량수  조업시간  계획정지  Overhaul  고장정지  교체시간]</p>
+      <textarea id="bulk-area" placeholder="예시: 2026-06-02	ProdA	1	1.25	500	10	1440	720	0	30	15"></textarea>
+    </div>
+    <div class="ch" style="justify-content:flex-end; gap:10px;"><button class="btn-s" onclick="closeBulk()">취소</button><button class="btn-p" onclick="importBulk()">가져오기</button></div>
+  </div>
+</div>
 
-            // 유효성 검사
-            if(!machine || !plannedTime || !cycleTime || !totalProduct) {
-                alert("모든 필수 값을 입력해주세요.");
-                return;
-            }
+<div id="toast"></div>
 
-            // [핵심 로직] OEE 계산
-            const operatingTime = plannedTime - downTime; // 실제 가동 시간
-            const goodProduct = totalProduct - defectProduct; // 양품 수량
+<script>
+/* ═══════ Core State ═══════ */
+let dataset = [];
+let chartInstance = null;
 
-            // 1) 시간가동률 (Availability)
-            const availability = (operatingTime / plannedTime) * 100;
-            
-            // 2) 성능가동률 (Performance)
-            const performance = ((cycleTime * totalProduct) / operatingTime) * 100;
-            
-            // 3) 양품률 (Quality)
-            const quality = (goodProduct / totalProduct) * 100;
-            
-            // 4) 최종 OEE
-            const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
+const FIELDS = ['date','product','machine','ct','qty','defect','work','planned','overhaul','breakdown','changeover'];
 
-            // 데이터 객체 생성
-            const newData = {
-                id: Date.now(),
-                date: date,
-                machine: machine,
-                availability: availability.toFixed(1),
-                performance: performance.toFixed(1),
-                quality: quality.toFixed(1),
-                oee: oee.toFixed(1)
-            };
+const INITIAL_SAMPLES = [
+  { id:1, date: "2026-05-10", product: "abc100", machine: 1, ct: 1.259, qty: 507, defect: 18, work: 1440, planned: 720, overhaul: 0, breakdown: 60, changeover: 0 },
+  { id:2, date: "2026-05-11", product: "abc101", machine: 1, ct: 0.569, qty: 1800, defect: 5, work: 1440, planned: 720, overhaul: 0, breakdown: 60, changeover: 40 },
+  { id:3, date: "2026-05-12", product: "abc102", machine: 1, ct: 1.259, qty: 260, defect: 2, work: 1440, planned: 720, overhaul: 0, breakdown: 30, changeover: 28 },
+  { id:4, date: "2026-05-13", product: "abc103", machine: 1, ct: 1.259, qty: 600, defect: 10, work: 1440, planned: 720, overhaul: 0, breakdown: 5, changeover: 66 }
+];
 
-            // 배열에 추가하고 LocalStorage에 저장
-            oeeData.push(newData);
-            localStorage.setItem('smartFactoryOEE', JSON.stringify(oeeData));
+/* ═══════ Boot ═══════ */
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('ultimateOeeData');
+  if (saved) {
+    dataset = JSON.parse(saved);
+  } else {
+    dataset = [...INITIAL_SAMPLES];
+    localStorage.setItem('ultimateOeeData', JSON.stringify(dataset));
+  }
+  renderTable();
+  initChart();
+});
 
-            // 테이블 갱신
-            renderTable();
-        }
+function go(pageId, btn) {
+  document.querySelectorAll('.pg').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(t => t.classList.remove('on'));
+  document.getElementById('pg-' + pageId).classList.add('on');
+  btn.classList.add('on');
+  if(pageId === 'monitoring') {
+    setTimeout(() => { if(chartInstance) { chartInstance.update(); } syncCalculations(); }, 50);
+  }
+}
 
-        // 3. 데이터 삭제 로직
-        function deleteData(id) {
-            if(confirm("정말로 이 기록을 삭제하시겠습니까?")) {
-                oeeData = oeeData.filter(data => data.id !== id);
-                localStorage.setItem('smartFactoryOEE', JSON.stringify(oeeData));
-                renderTable();
-            }
-        }
+/* ═══════ Mathematical Core Engine & Reactivity ═══════ */
+function calculateRowMetrics(r) {
+  const goodQty = Math.max(0, r.qty - r.defect);
+  const loadTime = Math.max(0, r.work - r.planned - r.overhaul);
+  const operatingTime = Math.max(0, loadTime - r.breakdown - r.changeover);
+  const netOperatingTime = r.ct * r.qty;
+  const valuableOperatingTime = r.ct * goodQty;
 
-        // 4. 테이블 렌더링 로직 (상태 색상 부여 포함)
-        function renderTable() {
-            const tbody = document.getElementById('dataTable');
-            tbody.innerHTML = '';
+  let availability = loadTime > 0 ? (operatingTime / loadTime) * 100 : 0;
+  let performance = operatingTime > 0 ? (netOperatingTime / operatingTime) * 100 : 0;
+  let quality = r.qty > 0 ? (goodQty / r.qty) * 100 : 0;
 
-            oeeData.forEach(data => {
-                // OEE 점수에 따른 배지 색상 및 상태 결정
-                let badgeColor = '';
-                let status = '';
-                
-                if (data.oee >= 85) {
-                    badgeColor = 'background-color: var(--green); color: white;';
-                    status = '✅ 우수';
-                } else if (data.oee >= 60) {
-                    badgeColor = 'background-color: var(--orange); color: black;';
-                    status = '⚠️ 보통';
-                } else {
-                    badgeColor = 'background-color: var(--red); color: white;';
-                    status = '🚨 개선요망';
-                }
+  // 보완책 3 도입: 이상 데이터 수치 제어 장치(Capping) 적용으로 통계 왜곡 방지
+  availability = Math.max(0, Math.min(100, availability));
+  performance = Math.max(0, Math.min(100, performance));
+  quality = Math.max(0, Math.min(100, quality));
+  
+  const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
 
-                const row = `
-                    <tr>
-                        <td>${data.date}</td>
-                        <td style="font-weight: bold; color: var(--primary-color);">${data.machine}</td>
-                        <td>${data.availability}%</td>
-                        <td>${data.performance}%</td>
-                        <td>${data.quality}%</td>
-                        <td>
-                            <span class="badge" style="${badgeColor}">
-                                ${data.oee}%
-                            </span>
-                        </td>
-                        <td style="font-size: 12px;">${status}</td>
-                        <td>
-                            <button class="btn-delete" onclick="deleteData(${data.id})">삭제</button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
+  return {
+    loadTime, operatingTime, netOperatingTime, valuableOperatingTime,
+    availability, performance, quality, oee
+  };
+}
 
-        // 초기 화면 로드 시 테이블 그리기
-        renderTable();
-    </script>
+function syncCalculations() {
+  let sumAvail=0, sumPerf=0, sumQual=0, sumOee=0, validCount=0;
+  let totalActualLoad = 0, totalValuableTime = 0;
+
+  dataset.forEach(r => {
+    const m = calculateRowMetrics(r);
+    sumAvail += m.availability; sumPerf += m.performance; sumQual += m.quality; sumOee += m.oee;
+    validCount++;
+    totalActualLoad += m.loadTime;
+    totalValuableTime += m.valuableOperatingTime;
+  });
+
+  if(validCount > 0) {
+    document.getElementById('kpi-avail').textContent = (sumAvail / validCount).toFixed(2) + '%';
+    document.getElementById('kpi-perf').textContent = (sumPerf / validCount).toFixed(2) + '%';
+    document.getElementById('kpi-quality').textContent = (sumQual / validCount).toFixed(2) + '%';
+    const avgOee = sumOee / validCount;
+    const oeeKpi = document.getElementById('kpi-oee');
+    oeeKpi.textContent = avgOee.toFixed(2) + '%';
+    oeeKpi.className = `kv ${avgOee >= 85 ? 'status-good' : avgOee >= 60 ? 'status-warn' : 'status-bad'}`;
+
+    // 원가 및 경제성 추정 계산 리액티브 연동
+    const targetOeePct = parseFloat(document.getElementById('cfg-tgt').value) || 0.85;
+    const machineRate = parseFloat(document.getElementById('cfg-mr').value) || 2500;
+    
+    const targetLoadTime = targetOeePct > 0 ? totalValuableTime / targetOeePct : 0;
+    const timeDifference = totalActualLoad - targetLoadTime;
+    const costImpact = timeDifference * machineRate;
+
+    const cBox = document.getElementById('cost-box');
+    if(costImpact > 0) {
+      cBox.className = "cbox ls"; document.getElementById('cost-icon').textContent = "🚨";
+      document.getElementById('cost-label').textContent = "누적 원가 손실 발생 가치";
+      document.getElementById('cost-amount').textContent = "+" + Math.abs(costImpact).toLocaleString() + " 원";
+    } else {
+      cBox.className = "cbox sv"; document.getElementById('cost-icon').textContent = "💰";
+      document.getElementById('cost-label').textContent = "목표 대비 누적 원가 절감액";
+      document.getElementById('cost-amount').textContent = Math.abs(costImpact).toLocaleString() + " 원 절감";
+    }
+    document.getElementById('cost-detail').textContent = `목표 부하 대비 차이 ${timeDifference.toFixed(1)}분 × 임률 ${machineRate.toLocaleString()}원/분`;
+  }
+  if(chartInstance) updateChartData();
+}
+
+/* ═══════ UI Rendering Engine ═══════ */
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  dataset.forEach(r => {
+    tbody.appendChild(createRowElement(r));
+  });
+  syncCalculations();
+}
+
+function createRowElement(r) {
+  const tr = document.createElement('tr');
+  tr.dataset.id = r.id;
+
+  FIELDS.forEach(f => {
+    const td = document.createElement('td');
+    const inp = document.createElement('input');
+    inp.className = 'cell-inp';
+    inp.value = r[f];
+    
+    if(f === 'date') inp.type = 'date';
+    else if(f === 'product') inp.type = 'text';
+    else { inp.type = 'number'; inp.step = f==='ct'?'0.001':'1'; }
+
+    // 보완책 2 도입: 데이터 입력 변화를 감지하여 실시간 즉시 연산 반영
+    inp.oninput = (e) => {
+      r[f] = f==='date'||f==='product' ? e.target.value : parseFloat(e.target.value) || 0;
+      localStorage.setItem('ultimateOeeData', JSON.stringify(dataset));
+      updateRowCells(tr, r);
+      syncCalculations();
+    };
+    td.appendChild(inp);
+    tr.appendChild(td);
+  });
+
+  // Derived 및 Output 셀 구조 설계
+  for(let i=0; i<4; i++) {
+    const td = document.createElement('td'); td.className = 'c-der'; tr.appendChild(td);
+  }
+  for(let i=0; i<4; i++) {
+    const td = document.createElement('td'); td.className = 'c-out'; tr.appendChild(td);
+  }
+
+  // 삭제 제어 열
+  const delTd = document.createElement('td');
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn-d'; delBtn.style.padding = '4px 8px'; delBtn.textContent = '✕';
+  delBtn.onclick = () => {
+    dataset = dataset.filter(x => x.id !== r.id);
+    localStorage.setItem('ultimateOeeData', JSON.stringify(dataset));
+    tr.remove();
+    syncCalculations();
+    showToast('🗑 행이 삭제되었습니다.');
+  };
+  delTd.appendChild(delBtn);
+  tr.appendChild(delTd);
+
+  updateRowCells(tr, r);
+  return tr;
+}
+
+function updateRowCells(tr, r) {
+  const m = calculateRowMetrics(r);
+  const tds = tr.querySelectorAll('td');
+  
+  // Derived 값 주입
+  tds[11].textContent = m.loadTime.toLocaleString();
+  tds[12].textContent = m.operatingTime.toLocaleString();
+  tds[13].textContent = m.netOperatingTime.toFixed(2);
+  tds[14].textContent = m.valuableOperatingTime.toFixed(2);
+
+  // Output 효율값 지표 주입
+  tds[15].textContent = m.availability.toFixed(1) + '%';
+  tds[16].textContent = m.performance.toFixed(1) + '%';
+  tds[17].textContent = m.quality.toFixed(1) + '%';
+  
+  // OEE 배지 분기 시각화 처리
+  let bgClass = m.oee >= 85 ? 'b-gn' : m.oee >= 60 ? 'b-og' : 'b-rd';
+  tds[18].innerHTML = `<span class="badge ${bgClass}">${m.oee.toFixed(1)}%</span>`;
+}
+
+function addRow() {
+  const newId = dataset.length > 0 ? Math.max(...dataset.map(x=>x.id)) + 1 : 1;
+  const newRow = { id: newId, date: new Date().toISOString().split('T')[0], product: "Prod_New", machine: 1, ct: 1.0, qty: 0, defect: 0, work: 1440, planned: 0, overhaul: 0, breakdown: 0, changeover: 0 };
+  dataset.push(newRow);
+  localStorage.setItem('ultimateOeeData', JSON.stringify(dataset));
+  document.getElementById('table-body').appendChild(createRowElement(newRow));
+  syncCalculations();
+}
+
+/* ═══════ 완벽한 CSV 내보내기 및 엑셀 수집 기능 (보완책 1 해결) ═══════ */
+function exportCSV() {
+  if (dataset.length === 0) { showToast('❌ 내보낼 데이터가 없습니다.'); return; }
+  
+  const headers = ['일자','제품명','호기','C/T(분/개)','생산량','불량수','조업시간','계획정지','Overhaul','고장정지','교체시간','부하시간','가동시간','정미시간','가치시간','시간가동률','성능가동률','양품률','OEE'];
+  
+  const csvRows = [headers];
+  dataset.forEach(r => {
+    const m = calculateRowMetrics(r);
+    csvRows.push([
+      r.date, r.product, r.machine, r.ct, r.qty, r.defect, r.work, r.planned, r.overhaul, r.breakdown, r.changeover,
+      m.loadTime, m.operatingTime, m.netOperatingTime.toFixed(2), m.valuableOperatingTime.toFixed(2),
+      m.availability.toFixed(1)+'%', m.performance.toFixed(1)+'%', m.quality.toFixed(1)+'%', m.oee.toFixed(1)+'%'
+    ]);
+  });
+
+  const csvContent = csvRows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Enterprise_OEE_Report_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('📥 CSV 다운로드가 완료되었습니다.');
+}
+
+function openBulk() { document.getElementById('bulk-modal').classList.add('show'); }
+function closeBulk() { document.getElementById('bulk-modal').classList.remove('show'); document.getElementById('bulk-area').value=''; }
+
+function importBulk() {
+  const text = document.getElementById('bulk-area').value.trim();
+  if(!text) { showToast('❌ 데이터를 입력해 주세요.'); return; }
+  const lines = text.split('\n');
+  let count = 0;
+  
+  lines.forEach(line => {
+    const tokens = line.split(/\t|,/);
+    if(tokens.length >= 6) {
+      if(isNaN(parseFloat(tokens[3]))) return; // 헤더 스킵 규칙
+      const newId = dataset.length > 0 ? Math.max(...dataset.map(x=>x.id)) + 1 : 1;
+      dataset.push({
+        id: newId, date: tokens[0].trim(), product: tokens[1].trim(), machine: parseInt(tokens[2])||1,
+        ct: parseFloat(tokens[3])||0, qty: parseFloat(tokens[4])||0, defect: parseFloat(tokens[5])||0,
+        work: parseFloat(tokens[6])||1440, planned: parseFloat(tokens[7])||0, overhaul: parseFloat(tokens[8])||0,
+        breakdown: parseFloat(tokens[9])||0, changeover: parseFloat(tokens[10])||0
+      });
+      count++;
+    }
+  });
+
+  localStorage.setItem('ultimateOeeData', JSON.stringify(dataset));
+  renderTable(); closeBulk();
+  showToast(`✅ 성공적으로 ${count}건의 데이터를 파싱 결합했습니다.`);
+}
+
+function clearAll() {
+  if(confirm('🚨 정말 모든 데이터를 초기화하시겠습니까? 데이터가 초기화 상태로 복구됩니다.')) {
+    dataset = []; localStorage.removeItem('ultimateOeeData'); renderTable(); syncCalculations();
+  }
+}
+
+/* ═══════ 대시보드 시각화 차트 연동 로직 ═══════ */
+function initChart() {
+  const ctx = document.getElementById('chart-canvas').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', callback: v => v+'%' } }
+      },
+      plugins: { legend: { labels: { color: '#fff', font: { family: 'IBM Plex Sans KR' } } } }
+    }
+  });
+  updateChartData();
+}
+
+function updateChartData() {
+  if(!chartInstance) return;
+  const sorted = [...dataset].sort((a,b) => new Date(a.date) - new Date(b.date));
+  chartInstance.data.labels = sorted.map(x => x.date.substring(5));
+  
+  const metrics = sorted.map(x => calculateRowMetrics(x));
+  
+  chartInstance.data.datasets = [
+    { label: 'OEE', data: metrics.map(m=>m.oee), borderColor: '#a78bfa', backgroundColor: 'transparent', borderWidth: 3 },
+    { label: '시간가동률', data: metrics.map(m=>m.availability), borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4] },
+    { label: '성능가동률', data: metrics.map(m=>m.performance), borderColor: '#10b981', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4] },
+    { label: '양품률', data: metrics.map(m=>m.quality), borderColor: '#f59e0b', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4] }
+  ];
+  chartInstance.update();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.display = 'none', 3000);
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </body>
 </html>
