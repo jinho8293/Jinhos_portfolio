@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설비종합효율(OEE) 데이터 관리 시트</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #3b82f6;
+            --text-color: #e2e8f0;
+            --border-color: #333;
+            --green: #10b981;
+            --orange: #f59e0b;
+            --red: #ef4444;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1, h2 { color: #ffffff; text-align: center; margin-bottom: 30px; }
+
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        
+        label { font-size: 13px; color: #a0aec0; font-weight: bold; }
+        
+        input {
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: #2d3748;
+            color: white;
+            font-size: 14px;
+        }
+        
+        input:focus { outline: none; border-color: var(--primary-color); }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover { background-color: #2563eb; }
+        
+        .btn-delete { background-color: #2d3748; color: #fc8181; width: auto; padding: 6px 12px; font-size: 12px;}
+        .btn-delete:hover { background-color: var(--red); color: white; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th { background-color: #2d3748; color: #a0aec0; font-weight: bold; }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>⚙️ OEE (설비종합효율) 실시간 트래커</h1>
+
+    <div class="card">
+        <h2 style="text-align: left; font-size: 18px;">📊 일일 생산 데이터 입력</h2>
+        <div class="input-grid">
+            <div class="input-group">
+                <label>날짜</label>
+                <input type="date" id="dateInput">
+            </div>
+            <div class="input-group">
+                <label>설비명</label>
+                <input type="text" id="machineInput" placeholder="예: M-01">
+            </div>
+            <div class="input-group">
+                <label>계획 조업 시간 (분)</label>
+                <input type="number" id="plannedTime" placeholder="예: 480" value="480">
+            </div>
+            <div class="input-group">
+                <label>고장/정지 시간 (분)</label>
+                <input type="number" id="downTime" placeholder="예: 30" value="0">
+            </div>
+            <div class="input-group">
+                <label>이론 사이클 타임 (분/개)</label>
+                <input type="number" step="0.1" id="cycleTime" placeholder="예: 1.5">
+            </div>
+            <div class="input-group">
+                <label>총 생산량 (개)</label>
+                <input type="number" id="totalProduct" placeholder="예: 250">
+            </div>
+            <div class="input-group">
+                <label>불량 수량 (개)</label>
+                <input type="number" id="defectProduct" placeholder="예: 5" value="0">
+            </div>
+        </div>
+        <button onclick="calculateAndSave()">데이터 계산 및 저장</button>
+    </div>
+
+    <div class="card">
+        <h2 style="text-align: left; font-size: 18px;">📋 OEE 분석 히스토리</h2>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>날짜</th>
+                        <th>설비명</th>
+                        <th>시간가동률</th>
+                        <th>성능가동률</th>
+                        <th>양품률</th>
+                        <th>최종 OEE</th>
+                        <th>상태</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 1. 초기 데이터 로드 (LocalStorage)
+        let oeeData = JSON.parse(localStorage.getItem('smartFactoryOEE')) || [];
+
+        // 오늘 날짜를 기본값으로 세팅
+        document.getElementById('dateInput').valueAsDate = new Date();
+
+        // 2. OEE 계산 및 저장 로직
+        function calculateAndSave() {
+            // 입력값 가져오기
+            const date = document.getElementById('dateInput').value;
+            const machine = document.getElementById('machineInput').value;
+            const plannedTime = parseFloat(document.getElementById('plannedTime').value);
+            const downTime = parseFloat(document.getElementById('downTime').value);
+            const cycleTime = parseFloat(document.getElementById('cycleTime').value);
+            const totalProduct = parseFloat(document.getElementById('totalProduct').value);
+            const defectProduct = parseFloat(document.getElementById('defectProduct').value);
+
+            // 유효성 검사
+            if(!machine || !plannedTime || !cycleTime || !totalProduct) {
+                alert("모든 필수 값을 입력해주세요.");
+                return;
+            }
+
+            // [핵심 로직] OEE 계산
+            const operatingTime = plannedTime - downTime; // 실제 가동 시간
+            const goodProduct = totalProduct - defectProduct; // 양품 수량
+
+            // 1) 시간가동률 (Availability)
+            const availability = (operatingTime / plannedTime) * 100;
+            
+            // 2) 성능가동률 (Performance)
+            const performance = ((cycleTime * totalProduct) / operatingTime) * 100;
+            
+            // 3) 양품률 (Quality)
+            const quality = (goodProduct / totalProduct) * 100;
+            
+            // 4) 최종 OEE
+            const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
+
+            // 데이터 객체 생성
+            const newData = {
+                id: Date.now(),
+                date: date,
+                machine: machine,
+                availability: availability.toFixed(1),
+                performance: performance.toFixed(1),
+                quality: quality.toFixed(1),
+                oee: oee.toFixed(1)
+            };
+
+            // 배열에 추가하고 LocalStorage에 저장
+            oeeData.push(newData);
+            localStorage.setItem('smartFactoryOEE', JSON.stringify(oeeData));
+
+            // 테이블 갱신
+            renderTable();
+        }
+
+        // 3. 데이터 삭제 로직
+        function deleteData(id) {
+            if(confirm("정말로 이 기록을 삭제하시겠습니까?")) {
+                oeeData = oeeData.filter(data => data.id !== id);
+                localStorage.setItem('smartFactoryOEE', JSON.stringify(oeeData));
+                renderTable();
+            }
+        }
+
+        // 4. 테이블 렌더링 로직 (상태 색상 부여 포함)
+        function renderTable() {
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+
+            oeeData.forEach(data => {
+                // OEE 점수에 따른 배지 색상 및 상태 결정
+                let badgeColor = '';
+                let status = '';
+                
+                if (data.oee >= 85) {
+                    badgeColor = 'background-color: var(--green); color: white;';
+                    status = '✅ 우수';
+                } else if (data.oee >= 60) {
+                    badgeColor = 'background-color: var(--orange); color: black;';
+                    status = '⚠️ 보통';
+                } else {
+                    badgeColor = 'background-color: var(--red); color: white;';
+                    status = '🚨 개선요망';
+                }
+
+                const row = `
+                    <tr>
+                        <td>${data.date}</td>
+                        <td style="font-weight: bold; color: var(--primary-color);">${data.machine}</td>
+                        <td>${data.availability}%</td>
+                        <td>${data.performance}%</td>
+                        <td>${data.quality}%</td>
+                        <td>
+                            <span class="badge" style="${badgeColor}">
+                                ${data.oee}%
+                            </span>
+                        </td>
+                        <td style="font-size: 12px;">${status}</td>
+                        <td>
+                            <button class="btn-delete" onclick="deleteData(${data.id})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // 초기 화면 로드 시 테이블 그리기
+        renderTable();
+    </script>
+</body>
+</html>
